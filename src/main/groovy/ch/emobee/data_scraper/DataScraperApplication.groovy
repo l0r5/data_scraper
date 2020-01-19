@@ -8,7 +8,7 @@ class DataScraperApplication {
 
 	static void main(String[] args) {
 		SpringApplication.run(DataScraperApplication, args)
-		new TrainDataFetcher().start();
+		new TrainDataFetcher().start()
 	}
 
 }
