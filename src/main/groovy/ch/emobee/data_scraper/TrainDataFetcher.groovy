@@ -1,5 +1,6 @@
 package ch.emobee.data_scraper
 
+import ch.emobee.data_scraper.services.MongoDBService
 import groovy.json.JsonSlurper
 import groovy.json.internal.LazyMap
 
@@ -22,7 +23,8 @@ public class TrainDataFetcher {
         def fetchedData = _fetchData()
         def formattedData = _formatData(fetchedData)
         def extractedDOI = _extractData(formattedData)
-        print(formattedData)
+        _persistData(extractedDOI)
+        print 'Done'
     }
 
     private List<String> _fetchData() {
@@ -67,7 +69,7 @@ public class TrainDataFetcher {
         def date = new Date()
         def sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss")
 
-        def extractedData = []
+        def extractedData = [:]
 
         println "Start extracting data..."
 
@@ -94,9 +96,14 @@ public class TrainDataFetcher {
                     "records"        : adjustedRecords
             ]
 
-            extractedData.add(extractedDataSet)
+            extractedData = extractedDataSet
         }
 
         return extractedData
+    }
+
+    private void _persistData(Map extractedData) {
+        println 'Persist data...'
+        MongoDBService.save(extractedData)
     }
 }
