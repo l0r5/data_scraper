@@ -12,9 +12,10 @@ class MongoDBService {
     def static save(obj) {
         MongoClient mongoClient = MongoClients.create()
         MongoDatabase db = mongoClient.getDatabase("train-delays")
-        MongoCollection<Document> collection = db.getCollection("scheduled-actual-arrival")
+        MongoCollection<Document> collection = db.getCollection("extract-scheduled-actual-arrival")
         Document doc = DataFormatUtils.parseToMongoDoc(obj)
         collection.insertOne(doc)
     }
+
 
 }

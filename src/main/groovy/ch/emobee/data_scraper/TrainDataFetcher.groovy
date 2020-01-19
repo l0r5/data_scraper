@@ -1,6 +1,7 @@
 package ch.emobee.data_scraper
 
 import ch.emobee.data_scraper.services.MongoDBService
+import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import groovy.json.internal.LazyMap
 
@@ -9,101 +10,83 @@ import java.text.SimpleDateFormat;
 
 public class TrainDataFetcher {
 
-    // documentation and query builder can be found here
-    // https://data.sbb.ch/explore/dataset/ist-daten-sbb/api/?dataChart=eyJxdWVyaWVzIjpbeyJjaGFydHMiOlt7InR5cGUiOiJsaW5lIiwiZnVuYyI6IkNPVU5UIiwieUF4aXMiOiJsaW5pZW5faWQiLCJzY2llbnRpZmljRGlzcGxheSI6dHJ1ZSwiY29sb3IiOiJyYW5nZS1BY2NlbnQifV0sInhBeGlzIjoiYW5rdW5mdHN6ZWl0IiwibWF4cG9pbnRzIjoyMCwidGltZXNjYWxlIjoiIiwic29ydCI6IiIsInNlcmllc0JyZWFrZG93biI6ImFua3VuZnRzdmVyc3BhdHVuZyIsInN0YWNrZWQiOiJwZXJjZW50IiwiY29uZmlnIjp7ImRhdGFzZXQiOiJpc3QtZGF0ZW4tc2JiIiwib3B0aW9ucyI6e319fV0sInRpbWVzY2FsZSI6IiIsImRpc3BsYXlMZWdlbmQiOnRydWUsImFsaWduTW9udGgiOnRydWV9
-    private final def FETCH_URLS = [
-            // all records
-            'https://data.sbb.ch/api/records/1.0/search/?dataset=ist-daten-sbb&facet=betreiber_id&facet=produkt_id&facet=linien_id&facet=linien_text&facet=verkehrsmittel_text&facet=faellt_aus_tf&facet=bpuic&facet=ankunftszeit&facet=an_prognose&facet=an_prognose_status&facet=ab_prognose_status&facet=ankunftsverspatung&facet=abfahrtsverspatung',
-            // only delayed records
-//            'https://data.sbb.ch/api/records/1.0/search/?dataset=ist-daten-sbb&q=ankunftsverspatung%3Dtrue&facet=betreiber_id&facet=produkt_id&facet=linien_id&facet=linien_text&facet=verkehrsmittel_text&facet=faellt_aus_tf&facet=bpuic&facet=ankunftszeit&facet=an_prognose&facet=an_prognose_status&facet=ab_prognose_status&facet=ankunftsverspatung&facet=abfahrtsverspatung'
-    ]
-
+    private static final String DOWNLOAD_URL = "https://data.sbb.ch/explore/dataset/ist-daten-sbb/download/?format=json&timezone=Europe/Berlin"
+    private String fileName = ''
 
     public void start() {
-        def fetchedData = _fetchData()
-        def formattedData = _formatData(fetchedData)
-        def extractedDOI = _extractData(formattedData)
-        _persistData(extractedDOI)
+        def dataToPersist = []
+        _fetchData()
+        def parsedData = _parseData()
+        def extractedData = _extractData(parsedData as List<LazyMap>)
+        _persistData(extractedData)
         print 'Done'
     }
 
-    private List<String> _fetchData() {
+    private void _fetchData() {
 
         List<String> fetchedData = []
+        def jsonSlurper = new JsonSlurper()
 
         println "Start fetching data..."
 
-        FETCH_URLS.each {
+        def date = new Date()
+        def sdf = new SimpleDateFormat("yyyy-MM-dd")
 
-            def connection = new URL(it).openConnection() as HttpURLConnection
+        fileName = "${sdf.format(date)}-train-delay-data.json"
+        new File("./output/$fileName") << new URL(DOWNLOAD_URL).getText()
 
-            // set headers
-            connection.setRequestProperty('User-Agent', 'groovy-2.4.15')
-            connection.setRequestProperty('Accept', 'application/json')
-
-            // get the response code - automatically sends the request
-            println "Response code: " + connection.responseCode
-            String fetchedDataSet = connection.inputStream.text
-
-            fetchedData.add(fetchedDataSet)
-        }
-        return fetchedData
+        println "Data fetched and stored under ./output/$fileName"
     }
 
-    private def _formatData(List<String> fetchedData) {
-
-        List formattedData = []
-        def jsonSlurper = new JsonSlurper()
+    private def _parseData() {
 
         println "Start formatting data..."
 
-        fetchedData.each {
-            def dataMap = jsonSlurper.parseText(it as String)
-            formattedData.add(dataMap)
-        }
-        return formattedData
+        def jsonSlurper = new JsonSlurper()
+        File file = new File("./output/$fileName")
+        def parsedData = jsonSlurper.parseText(file.text)
+
+        return parsedData
     }
 
-    private def _extractData(List<LazyMap> formattedData) {
+    private def _extractData(List<LazyMap> parsedData) {
 
         def date = new Date()
-        def sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss")
-
-        def extractedData = [:]
+        def sdf = new SimpleDateFormat("yyyy-MM-dd")
 
         println "Start extracting data..."
 
-        formattedData.each {
+        def adjustedRecords = []
 
-            def adjustedRecords = []
-            it.records.each { record ->
-                adjustedRecords.add([
-                        "line": (record as LazyMap).fields["linien_id"],
-                        "station": (record as LazyMap).fields["haltestellen_name"],
-                        "vehicle": (record as LazyMap).fields["verkehrsmittel_text"],
-                        "scheduled_arrival": (record as LazyMap).fields["ankunftszeit"],
-                        "actual_arrival"   : (record as LazyMap).fields["an_prognose"],
-                        "delay_at_arrival": (record as LazyMap).fields["ankunftsverspatung"],
-                        "cancelled": (record as LazyMap).fields["faellt_aus_tf"],
-                        "service_provider": (record as LazyMap).fields["betreiber_name"],
-                        "geoPosition": (record as LazyMap).fields["geopos"],
-                ])
-            }
-
-            def extractedDataSet = [
-                    "fetchDate"      : sdf.format(date),
-                    "numberOfRecords": it.nhits,
-                    "records"        : adjustedRecords
-            ]
-
-            extractedData = extractedDataSet
+        parsedData.each {
+            adjustedRecords.add([
+                    "line"             : it.fields["linien_id"],
+                    "station"          : it.fields["haltestellen_name"],
+                    "vehicle"          : it.fields["verkehrsmittel_text"],
+                    "scheduled_arrival": it.fields["ankunftszeit"],
+                    "actual_arrival"   : it.fields["an_prognose"],
+                    "delay_at_arrival" : it.fields["ankunftsverspatung"],
+                    "cancelled"        : it.fields["faellt_aus_tf"],
+                    "service_provider" : it.fields["betreiber_name"],
+                    "geoPosition"      : it.fields["geopos"],
+            ])
         }
 
+        def extractedData = [
+                "fetchDate"      : sdf.format(date),
+                "numberOfRecords": parsedData.size(),
+                "records"        : adjustedRecords
+        ]
+
+        def json = JsonOutput.toJson(extractedData)
+
+        println "Create extract under ./output/${sdf.format(date)}-extract.json"
+        new File("./output/${sdf.format(date)}-extract.json").write(json)
         return extractedData
     }
 
-    private void _persistData(Map extractedData) {
+    private static void _persistData(data) {
         println 'Persist data...'
-        MongoDBService.save(extractedData)
+        MongoDBService.save(data)
     }
 }
