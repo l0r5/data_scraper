@@ -10,9 +10,10 @@ class AppTaskScheduler {
 
     private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
-    @Scheduled(cron="0 15 22 ? * *")
-    static void startTrainDataJob() {
-        println "Job triggered at: ${sdf.format(new Date())}"
-        new TrainDataFetcher().start()
-    }
+    // TODO: Comment out as soon as scheduler is needed.
+//    @Scheduled(cron="0 15 22 ? * *")
+//    static void startTrainDataJob() {
+//        println "Job triggered at: ${sdf.format(new Date())}"
+//        new TrainDataFetcher().start()
+//    }
 }
