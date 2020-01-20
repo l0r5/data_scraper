@@ -10,8 +10,8 @@ class DataScraperApplication {
 
 	static void main(String[] args) {
 		SpringApplication.run(DataScraperApplication, args)
-//		new TrainDataFetcher().start()
-		new Calculator().start()
+		new TrainDataFetcher().start()
+		new Calculator().calculate(Calculator.CALC_TYPE_ALL_CALC)
 	}
 
 }

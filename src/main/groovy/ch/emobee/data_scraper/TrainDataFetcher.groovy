@@ -7,50 +7,39 @@ import groovy.json.JsonSlurper
 import groovy.json.internal.LazyMap
 
 import java.text.SimpleDateFormat
+import java.util.logging.Logger
 
 
 class TrainDataFetcher {
 
     private static final String DOWNLOAD_URL = "https://data.sbb.ch/explore/dataset/ist-daten-sbb/download/?format=json&timezone=Europe/Berlin"
-    private String fileName = ''
+    private final logger = Logger.getLogger(TrainDataFetcher.toString())
 
     void start() {
-        _fetchData()
-        def parsedData = _parseData()
-        def extractedData = _extractData(parsedData as List<LazyMap>)
+
+        def date = new Date()
+        def sdf = new SimpleDateFormat("yyyy-MM-dd")
+        String fileNameRaw = "${sdf.format(date)}-raw.json"
+        String fileNameExtract = "${sdf.format(date)}-extract.json"
+        String path = './output/source_data/'
+
+        _fetchData(path, fileNameRaw)
+        def parsedData = _parseData(path, fileNameRaw)
+        def extractedData = _extractData(parsedData as List<LazyMap>, path, fileNameExtract)
         _persistData(extractedData)
-        print 'TrainDataFetcher finished.'
+        logger.info('Finished Train Delay Fetch.')
     }
 
-    private void _fetchData() {
+    private void _fetchData( path, fileName) {
+        logger.info("Start fetching data from $DOWNLOAD_URL")
+        new DataFormatUtils().exportToFile(new URL(DOWNLOAD_URL).getText(), fileName, path)
+        logger.info("Data fetched and file was exported.")
+    }
+
+    private def _extractData(List<LazyMap> parsedData, String fileName, String path) {
 
         def date = new Date()
         def sdf = new SimpleDateFormat("yyyy-MM-dd")
-        fileName = "${sdf.format(date)}-train-delay-data.json"
-
-        println "Start fetching data..."
-        DataFormatUtils.exportToFile(new URL(DOWNLOAD_URL).getText(), fileName, './output/source_data/')
-        println "Data fetched and stored."
-    }
-
-    private def _parseData() {
-
-        println "Start formatting data..."
-
-        def jsonSlurper = new JsonSlurper()
-        File file = new File("./output/source_data/$fileName")
-        def parsedData = jsonSlurper.parseText(file.text)
-
-        return parsedData
-    }
-
-    private def static _extractData(List<LazyMap> parsedData) {
-
-        def date = new Date()
-        def sdf = new SimpleDateFormat("yyyy-MM-dd")
-
-        println "Start extracting data..."
-
         def adjustedRecords = []
 
         parsedData.each {
@@ -74,13 +63,23 @@ class TrainDataFetcher {
         ]
 
         def json = JsonOutput.toJson(extractedData)
-        DataFormatUtils.exportToFile(json, "${sdf.format(date)}-extract.json", './output/source_data/')
+        new DataFormatUtils().exportToFile(json, path, fileName)
 
+        logger.info("Extract was created and exported.")
         return extractedData
     }
 
-    private static void _persistData(data) {
-        println 'Persist data...'
+    private def _parseData(String path, String fileName) {
+        File file = new File("$path$fileName")
+        def jsonSlurper = new JsonSlurper()
+        def parsedData = jsonSlurper.parseText(file.text)
+
+        logger.info("Parsed file $path$fileName.")
+        return parsedData
+    }
+
+    private void _persistData(data) {
         MongoDBService.save(data)
+        logger.info("Persisted data.")
     }
 }

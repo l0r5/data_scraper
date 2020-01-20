@@ -4,37 +4,49 @@ import ch.emobee.data_scraper.services.MongoDBService
 import ch.emobee.data_scraper.utils.DataFormatUtils
 
 import java.text.SimpleDateFormat
+import java.util.logging.Logger
 
 class Calculator {
 
-    // compare delays
-    List dataSets = []
-    List caclulatedDelays = []
-    List caclulatedDelaysFlagTrue = []
-    List caclulatedDelaysFlagFalse = []
-    List delayFlag = []
+    public final static int CALC_TYPE_ALL_CALC = 0
+    public final static int CALC_TYPE_TOTAL_COUNTED_DELAYS = 1
 
-    void start() {
-        dataSets = MongoDBService.findAll()
-        _compareDelays()
-        def sortedDelays = _sortDelays(dataSets)
-//        DataFormatUtils.exportToFile(DataFormatUtils.toCSV(sortedDelays), 'sorted-delay-name.csv', './output/processed/')
-        def countedDelays = _countDelays(sortedDelays)
-        countedDelays.each { k, v ->
-            DataFormatUtils.exportToFile(DataFormatUtils.toCSV(v as Map), "$k-counted-delays.csv", './output/processed/')
+    private final logger = Logger.getLogger(Calculator.toString())
+
+    void calculate(int calcType) {
+        switch (calcType) {
+            case CALC_TYPE_ALL_CALC:
+                _runAllCalculations()
+                break
+            default:
+                logger.warning("Invalid calcType entered.")
         }
-        def mergedCountedDelay = _mergeCountedDelays(countedDelays)
-
-        String fileName = "${(mergedCountedDelay["dates"] as List).get(0)}-to-${(mergedCountedDelay["dates"] as List).get((mergedCountedDelay["dates"] as List).size() - 1)}-total-counted-delays.csv"
-        DataFormatUtils.exportToFile(DataFormatUtils.toCSV(mergedCountedDelay["total-delay-times"] as Map), "$fileName", './output/processed/')
-
-        // make prediction -> hier eventuell machine learning?? jemanden dazu fragen
-// bzw. berechene verspätungs wahrscheinlcihkeit p für ein gewisses t
-
-        println "Calculator finished."
     }
 
-    private void _compareDelays() {
+    private void _runAllCalculations() {
+
+        List dataSets = MongoDBService.findAll()
+
+        def delaySets = _createDelaySets(dataSets)
+        def countedDelaySets = _countDelays(delaySets)
+        def mergedCountedDelaySet = _mergeCountedDelays(countedDelaySets)
+        exportCountedDelayFiles(countedDelaySets)
+        exportMergedCountedDelayFiles(mergedCountedDelaySet)
+
+        // make prediction -> hier eventuell machine learning?? jemanden dazu fragen
+        // bzw. berechene verspätungs wahrscheinlcihkeit p für ein gewisses t
+
+        logger.info("Calculator finished calculation: AllCalculations.")
+    }
+
+
+    private List _calculateDelayTimes(dataSets) {
+        // compare delays
+        List caclulatedDelays = []
+        List caclulatedDelaysFlagTrue = []
+        List caclulatedDelaysFlagFalse = []
+        List delayFlagTrue = []
+
         dataSets.each {
             it["records"].each { record ->
                 if (record["scheduled_arrival"] != null && record["actual_arrival"] != null) {
@@ -43,7 +55,7 @@ class Calculator {
                     def difference = (dateScheduledArrival.getTime() - dateActualArrival.getTime()) / 1000
                     // norming to seconds
                     if (difference < 0) {
-                        record["time_delayed"] = difference * -1
+                        record["delay_time"] = difference * -1
                         caclulatedDelays.add(record)
                         if (record["delay_at_arrival"] == "true") {
                             caclulatedDelaysFlagTrue.add(record)
@@ -53,24 +65,35 @@ class Calculator {
                     }
                 }
                 if (record["delay_at_arrival"] == "true") {
-                    delayFlag.add(record)
+                    delayFlagTrue.add(record)
                 }
             }
+            int numberAllFlagTrue = delayFlagTrue.size()
+            int numberCalcFlagTrue = caclulatedDelaysFlagTrue.size()
+            int numberCalcFlagFalse = caclulatedDelaysFlagFalse.size()
+            logger.info ("Entries with fetch date: ${it["fetchDate"]}")
+            logger.info("The total number of entries is: ${(it["numberOfRecords"])}")
+            logger.info("The number of entries with the flag delay_at_arrival = true: $numberAllFlagTrue.")
+            logger.info("The number of entries with calc delay times and flag delay_at_arrival = true: $numberCalcFlagTrue.")
+            logger.info("The number of entries whith calc delay times and flag delay_at_arrival = false: $numberCalcFlagFalse.")
         }
-        println "Delays compared."
+        logger.info("Delay times were calculated.")
+        return dataSets
     }
 
-    private static Map _sortDelays(dataSets) {
+
+    private Map _createDelaySets(dataSets) {
 
         Map collectedDelays = [:]
         Map collectedSortedDelayTimes = [:]
 
-        dataSets.each { dataSet ->
+        def setsWithDelayTimes = _calculateDelayTimes(dataSets)
+
+        setsWithDelayTimes.each { dataSet ->
             List timeDelayed = []
             dataSet["records"].each { record ->
-
-                if (record["time_delayed"] != null) {
-                    timeDelayed.add(record["time_delayed"])
+                if (record["delay_time"] != null) {
+                    timeDelayed.add(record["delay_time"])
                 }
             }
             collectedDelays[dataSet['fetchDate']] = timeDelayed
@@ -95,16 +118,14 @@ class Calculator {
                     remainingEntriesCounter = remainingEntriesCounter - matches.size()
                 }
                 sortedDelayTimes[i] = matches
-                println("Counted ${matches.size()} delays with a delay of $i Minutes. ${remainingEntriesCounter} entries remaining to be sorted.")
             }
             collectedSortedDelayTimes[k] = sortedDelayTimes
         }
-
-        println "Calculated delays."
+        logger.info( "Created delay sets.")
         return collectedSortedDelayTimes
     }
 
-    private static Map _countDelays(dataSets) {
+    private Map _countDelays(dataSets) {
         Map collectedCountedDelays = [:]
         dataSets.each { date, values ->
             Map countedDelays = [:]
@@ -113,6 +134,7 @@ class Calculator {
             }
             collectedCountedDelays[date] = countedDelays
         }
+        logger.info("Counted delays.")
         return collectedCountedDelays
     }
 
@@ -136,6 +158,20 @@ class Calculator {
                 (mergedCountedDelays['dates'] as List).add(date as String)
             }
         }
+        logger.info("Merged counted delays.")
         return mergedCountedDelays
     }
+
+    private static void exportCountedDelayFiles(countedDelaySets) {
+        countedDelaySets.each { k, v ->
+            String fileName = "$k-counted-delays.csv"
+            new DataFormatUtils().exportToFile(DataFormatUtils.toCSV(v as Map), "$fileName", './output/processed/')
+        }
+    }
+
+    private static void exportMergedCountedDelayFiles(mergedCountedDelaySet) {
+        String fileName = "${(mergedCountedDelaySet["dates"] as List).get(0)}-to-${(mergedCountedDelaySet["dates"] as List).get((mergedCountedDelaySet["dates"] as List).size() - 1)}-total-counted-delays.csv"
+        new DataFormatUtils().exportToFile(DataFormatUtils.toCSV(mergedCountedDelaySet["total-delay-times"] as Map), "$fileName", './output/processed/')
+    }
+
 }
