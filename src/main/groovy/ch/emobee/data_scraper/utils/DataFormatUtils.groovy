@@ -1,6 +1,7 @@
 package ch.emobee.data_scraper.utils
 
 import com.google.gson.Gson
+import groovy.json.JsonOutput
 import org.bson.Document
 
 import java.util.logging.Logger
@@ -9,7 +10,7 @@ class DataFormatUtils {
 
     private final logger = Logger.getLogger(DataFormatUtils.toString())
 
-    def static parseToMongoDoc(obj) {
+    static def parseToMongoDoc(obj) {
         Gson gson = new Gson()
         def json = gson.toJson(obj)
         return Document.parse(json)

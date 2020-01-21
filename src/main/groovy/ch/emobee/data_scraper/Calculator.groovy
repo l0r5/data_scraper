@@ -2,28 +2,17 @@ package ch.emobee.data_scraper
 
 import ch.emobee.data_scraper.services.MongoDBService
 import ch.emobee.data_scraper.utils.DataFormatUtils
+import groovy.json.JsonOutput
 
 import java.text.SimpleDateFormat
 import java.util.logging.Logger
 
 class Calculator {
 
-    public final static int CALC_TYPE_ALL_CALC = 0
-    public final static int CALC_TYPE_TOTAL_COUNTED_DELAYS = 1
-
     private final logger = Logger.getLogger(Calculator.toString())
 
-    void calculate(int calcType) {
-        switch (calcType) {
-            case CALC_TYPE_ALL_CALC:
-                _runAllCalculations()
-                break
-            default:
-                logger.warning("Invalid calcType entered.")
-        }
-    }
 
-    private void _runAllCalculations() {
+    String runAllCalculations() {
 
         List dataSets = MongoDBService.findAll()
 
@@ -37,8 +26,8 @@ class Calculator {
         // bzw. berechene verspätungs wahrscheinlcihkeit p für ein gewisses t
 
         logger.info("Calculator finished calculation: AllCalculations.")
+        return JsonOutput.toJson(mergedCountedDelaySet)
     }
-
 
     private List _calculateDelayTimes(dataSets) {
         // compare delays
@@ -80,7 +69,6 @@ class Calculator {
         logger.info("Delay times were calculated.")
         return dataSets
     }
-
 
     private Map _createDelaySets(dataSets) {
 
