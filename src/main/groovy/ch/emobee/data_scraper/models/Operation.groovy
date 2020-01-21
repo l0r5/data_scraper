@@ -14,9 +14,6 @@ class Operation {
     private int calcType
     private String result
 
-    Operation() {
-    }
-
     void start(calcType) {
         this.calcType = calcType
         switch (calcType) {
