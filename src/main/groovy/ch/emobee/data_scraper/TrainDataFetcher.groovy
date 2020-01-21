@@ -50,9 +50,7 @@ class TrainDataFetcher {
                     "scheduled_arrival": it.fields["ankunftszeit"],
                     "actual_arrival"   : it.fields["an_prognose"],
                     "delay_at_arrival" : it.fields["ankunftsverspatung"],
-                    "cancelled"        : it.fields["faellt_aus_tf"],
-                    "service_provider" : it.fields["betreiber_name"],
-                    "geoPosition"      : it.fields["geopos"],
+                    "cancelled"        : it.fields["faellt_aus_tf"]
             ])
         }
 

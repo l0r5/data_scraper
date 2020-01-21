@@ -14,6 +14,6 @@ class AppTaskScheduler {
 //    @Scheduled(cron="0 15 22 ? * *")
 //    static void startTrainDataJob() {
 //        println "Job triggered at: ${sdf.format(new Date())}"
-//        new TrainDataFetcher().start()
+//        new Operation().runOperation(Operation.OPERATION_TYPE_ALL_CALC)
 //    }
 }

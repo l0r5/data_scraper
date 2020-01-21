@@ -17,7 +17,7 @@ public class RestAPIService {
     @RequestMapping("/api/calc-total-counted-delays")
     String result(@RequestParam(value = "result", defaultValue = "") result) {
         logger.info("GET  /api/calc-total-counted-delays")
-        operation.start(Operation.OPERATION_TYPE_ALL_CALC)
+        operation.runOperation(Operation.OPERATION_TYPE_ALL_CALC)
         logger.info("GET  /api/calc-total-counted-delays -> result:")
         logger.info("${operation.getResult()}")
         return operation.getResult()

@@ -1,5 +1,6 @@
 package ch.emobee.data_scraper
 
+import ch.emobee.data_scraper.models.Operation
 import ch.emobee.data_scraper.services.MongoDBService
 import ch.emobee.data_scraper.utils.DataFormatUtils
 import groovy.json.JsonOutput
@@ -11,8 +12,19 @@ class Calculator {
 
     private final logger = Logger.getLogger(Calculator.toString())
 
+    String calc(operationType) {
+        String result = ''
+        switch (operationType) {
+            case Operation.OPERATION_TYPE_ALL_CALC:
+                result =  _runAllCalculations()
+                break
+            default:
+                logger.warning("Invalid operationType entered.")
+        }
+        return result
+    }
 
-    String runAllCalculations() {
+    private String _runAllCalculations() {
 
         List dataSets = MongoDBService.findAll()
 
@@ -24,7 +36,6 @@ class Calculator {
 
         // make prediction -> hier eventuell machine learning?? jemanden dazu fragen
         // bzw. berechene verspätungs wahrscheinlcihkeit p für ein gewisses t
-
         logger.info("Calculator finished calculation: AllCalculations.")
         return JsonOutput.toJson(mergedCountedDelaySet)
     }

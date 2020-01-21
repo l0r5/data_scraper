@@ -11,25 +11,16 @@ class Operation {
     public final static int OPERATION_TYPE_TOTAL_COUNTED_DELAYS = 1
 
     private final logger = Logger.getLogger(Operation.toString())
-    private int calcType
-    private String result
+    private int _operationType
+    private String _result
 
-    void start(calcType) {
-        this.calcType = calcType
-        switch (calcType) {
-            case OPERATION_TYPE_ALL_CALC:
-                setResult(new Calculator().runAllCalculations())
-                break
-            default:
-                logger.warning("Invalid calcType entered.")
-        }
+    void runOperation(operationType) {
+        _operationType = operationType
+        _result = new Calculator().calc(_operationType)
     }
 
     String getResult() {
-        return result
+        return _result
     }
 
-    void setResult(String result) {
-        this.result = result
-    }
 }
