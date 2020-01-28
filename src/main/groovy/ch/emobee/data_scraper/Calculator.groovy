@@ -167,8 +167,12 @@ class Calculator {
 
     private Map _addProbabilities(mergedCountedDelaySet) {
         Map resultSet = mergedCountedDelaySet
-        Map probabilities = [:]
+        Map delayProbabilities = [:]
+        Map accumulatedProbabilities = [:]
+        Map payoutProbabilities = [:]
         int totalNumberOfRecords = 0
+        BigDecimal accumulatedDelayProbability = 0
+        BigDecimal payoutProbability = 1
 
         (mergedCountedDelaySet["total-delay-times"] as Map).each { delayTime, numberOfDelays ->
             totalNumberOfRecords += numberOfDelays
@@ -176,11 +180,18 @@ class Calculator {
 
         // Calculate probability for each delayTime
         (mergedCountedDelaySet["total-delay-times"] as Map).each { delayTime, numberOfDelays ->
-            probabilities["$delayTime"] = numberOfDelays / totalNumberOfRecords
+            BigDecimal delayProbability = numberOfDelays / totalNumberOfRecords
+            delayProbabilities["$delayTime"] = delayProbability
+            accumulatedDelayProbability += delayProbability
+            accumulatedProbabilities["$delayTime"] = accumulatedDelayProbability
+            payoutProbabilities["$delayTime"] = payoutProbability
+            payoutProbability -= delayProbability
         }
 
-        resultSet["probabilities"] = probabilities
-        logger.info("Added probabilities.")
+        resultSet["delay-probabilities"] = delayProbabilities
+        resultSet["accumulated-delay-probabilities"] = accumulatedProbabilities
+        resultSet["payout-probabilities"] = payoutProbabilities
+        logger.info("Added probabilities as well as accumulated probabilities.")
         return [:]
     }
 
