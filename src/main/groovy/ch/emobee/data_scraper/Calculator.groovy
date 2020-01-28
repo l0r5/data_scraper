@@ -170,7 +170,9 @@ class Calculator {
 
     private static void exportMergedCountedDelayFiles(mergedCountedDelaySet) {
         String fileName = "${(mergedCountedDelaySet["dates"] as List).get(0)}-to-${(mergedCountedDelaySet["dates"] as List).get((mergedCountedDelaySet["dates"] as List).size() - 1)}-total-counted-delays.csv"
+        String fileNameCurrent = "total-counted-delays.json"
         new DataFormatUtils().exportToFile(DataFormatUtils.toCSV(mergedCountedDelaySet["total-delay-times"] as Map), "$fileName", './output/processed/')
+        new DataFormatUtils().exportToFile(JsonOutput.toJson(mergedCountedDelaySet), "$fileNameCurrent", './output/current/')
     }
 
 }
