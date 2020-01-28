@@ -3,6 +3,7 @@ package ch.emobee.data_scraper.services
 
 import ch.emobee.data_scraper.models.Operation
 import groovy.json.JsonSlurper
+import groovy.json.internal.LazyMap
 import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -29,13 +30,13 @@ public class RestAPIService {
 
     @CrossOrigin
     @GetMapping("/api/get-total-counted-delays")
-    String getTotalCountedDelays() {
+    Map getTotalCountedDelays() {
         logger.info("GET  /api/get-total-counted-delays")
 
         JsonSlurper jsonSlurper = new JsonSlurper()
-        def data = ''
+        LazyMap data = []
         try {
-            data = jsonSlurper.parse(new File('./output/current/total-counted-delays.json'))
+            data = jsonSlurper.parse(new File('./output/current/total-counted-delays.json')) as LazyMap
         } catch (Exception e) {
             print("Error during reading file: ${e.printStackTrace()}")
         }
