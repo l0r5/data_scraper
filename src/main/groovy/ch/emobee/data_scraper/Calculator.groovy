@@ -31,12 +31,13 @@ class Calculator {
         def delaySets = _createDelaySets(dataSets)
         def countedDelaySets = _countDelays(delaySets)
         def mergedCountedDelaySet = _mergeCountedDelays(countedDelaySets)
+        _addProbabilities(mergedCountedDelaySet)
         exportCountedDelayFiles(countedDelaySets)
         exportMergedCountedDelayFiles(mergedCountedDelaySet)
 
         // make prediction -> hier eventuell machine learning?? jemanden dazu fragen
         // bzw. berechene verspätungs wahrscheinlcihkeit p für ein gewisses t
-        logger.info("Calculator finished calculation: AllCalculations.")
+        logger.info("Calculator finished calculation: _runAllCalculations().")
         return JsonOutput.toJson(mergedCountedDelaySet)
     }
 
@@ -88,11 +89,14 @@ class Calculator {
 
         def setsWithDelayTimes = _calculateDelayTimes(dataSets)
 
+        // adds a Map with all v:delays that have a delay_time and k:date of the fetched dataset
         setsWithDelayTimes.each { dataSet ->
             List timeDelayed = []
             dataSet["records"].each { record ->
                 if (record["delay_time"] != null) {
                     timeDelayed.add(record["delay_time"])
+                } else {
+                    timeDelayed.add(0 as BigDecimal)
                 }
             }
             collectedDelays[dataSet['fetchDate']] = timeDelayed
@@ -101,7 +105,7 @@ class Calculator {
         collectedDelays.each { k, v ->
             Map sortedDelayTimes = [:]
             int remainingEntriesCounter = (v as List).size()
-            for (int i = 1; remainingEntriesCounter > 0; i++) {
+            for (int i = 0; remainingEntriesCounter > 0; i++) {
                 def matches
                 // make 120 minutes the upper bound where all results are aggregated
                 if (i >= 120) {
@@ -161,6 +165,25 @@ class Calculator {
         return mergedCountedDelays
     }
 
+    private Map _addProbabilities(mergedCountedDelaySet) {
+        Map resultSet = mergedCountedDelaySet
+        Map probabilities = [:]
+        int totalNumberOfRecords = 0
+
+        (mergedCountedDelaySet["total-delay-times"] as Map).each { delayTime, numberOfDelays ->
+            totalNumberOfRecords += numberOfDelays
+        }
+
+        // Calculate probability for each delayTime
+        (mergedCountedDelaySet["total-delay-times"] as Map).each { delayTime, numberOfDelays ->
+            probabilities["$delayTime"] = numberOfDelays / totalNumberOfRecords
+        }
+
+        resultSet["probabilities"] = probabilities
+        logger.info("Added probabilities.")
+        return [:]
+    }
+
     private static void exportCountedDelayFiles(countedDelaySets) {
         countedDelaySets.each { k, v ->
             String fileName = "$k-counted-delays.csv"
@@ -172,7 +195,6 @@ class Calculator {
         String fileName = "${(mergedCountedDelaySet["dates"] as List).get(0)}-to-${(mergedCountedDelaySet["dates"] as List).get((mergedCountedDelaySet["dates"] as List).size() - 1)}-total-counted-delays.csv"
         String fileNameCurrent = "total-counted-delays.json"
         new DataFormatUtils().exportToFile(DataFormatUtils.toCSV(mergedCountedDelaySet["total-delay-times"] as Map), "$fileName", './output/processed/')
-        new DataFormatUtils().exportToFile(JsonOutput.toJson(mergedCountedDelaySet), "$fileNameCurrent", './output/current/')
+        new DataFormatUtils().exportToFile(JsonOutput.toJson(mergedCountedDelaySet as Map), "$fileNameCurrent", './output/current/')
     }
-
 }

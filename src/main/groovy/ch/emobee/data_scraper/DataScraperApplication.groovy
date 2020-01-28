@@ -11,7 +11,7 @@ class DataScraperApplication {
 
     static void main(String[] args) {
         SpringApplication.run(DataScraperApplication, args)
-//        new Operation().runOperation(Operation.OPERATION_TYPE_ALL_CALC)
+        new Operation().runOperation(Operation.OPERATION_TYPE_ALL_CALC)
 //        new TrainDataFetcher().start()
     }
 }
