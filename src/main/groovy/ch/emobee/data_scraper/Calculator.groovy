@@ -47,6 +47,7 @@ class Calculator {
         List caclulatedDelaysFlagTrue = []
         List caclulatedDelaysFlagFalse = []
         List delayFlagTrue = []
+        List cancelledTrue = []
 
         dataSets.each {
             it["records"].each { record ->
@@ -67,6 +68,9 @@ class Calculator {
                 }
                 if (record["delay_at_arrival"] == "true") {
                     delayFlagTrue.add(record)
+                }
+                if (record["cancelled"] == "true") {
+                    cancelledTrue.add(record)
                 }
             }
             int numberAllFlagTrue = delayFlagTrue.size()
