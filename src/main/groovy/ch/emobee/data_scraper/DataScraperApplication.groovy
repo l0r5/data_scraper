@@ -1,5 +1,8 @@
 package ch.emobee.data_scraper
 
+import ch.emobee.data_scraper.fetchers.DBTrainDataFetcher
+import ch.emobee.data_scraper.fetchers.SBBTrainDataFetcher
+import ch.emobee.data_scraper.fetchers.TrainDataFetcherHandler
 import ch.emobee.data_scraper.models.Operation
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
@@ -13,5 +16,6 @@ class DataScraperApplication {
         SpringApplication.run(DataScraperApplication, args)
 //        new Operation().runOperation(Operation.OPERATION_TYPE_ALL_CALC)
 //        new TrainDataFetcher().start()
+        TrainDataFetcherHandler.instance.runCompleteFetchRoutine()
     }
 }

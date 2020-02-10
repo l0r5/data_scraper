@@ -11,10 +11,10 @@ import org.bson.Document
 
 class MongoDBService {
 
-    def static save(obj) {
+    def static save(Object obj, databaseName, collectionName) {
         MongoClient mongoClient = MongoClients.create()
-        MongoDatabase db = mongoClient.getDatabase("train-delays")
-        MongoCollection<Document> collection = db.getCollection("extract-scheduled-actual-arrival")
+        MongoDatabase db = mongoClient.getDatabase(databaseName)
+        MongoCollection<Document> collection = db.getCollection(collectionName)
         Document doc = DataFormatUtils.parseToMongoDoc(obj)
         collection.insertOne(doc)
     }
@@ -30,6 +30,5 @@ class MongoDBService {
         }
         return allDocs
     }
-
 
 }
